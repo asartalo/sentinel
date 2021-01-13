@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:args/args.dart';
-import 'package:io/io.dart';
+import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:sentinel/path_tests.dart';
 import 'package:sentinel/test_file_match.dart';
@@ -16,10 +16,12 @@ void main(List<String> arguments) async {
 
   try {
     final parser = ArgParser();
-    final pathArgs = parser.parse(arguments).rest;
+    parser.addFlag('no-integration', negatable: false, abbr: 'I');
+    final args = parser.parse(arguments);
+    final pathArgs = args.rest;
     final fullPath = await getPathFromArgsOrCurrent(pathArgs);
 
-    watchDirectory(fullPath);
+    await watchDirectory(fullPath, noIntegration: args['no-integration']);
   } catch (e) {
     exitCode = 1;
     stderr.writeln(e.toString());
@@ -27,17 +29,13 @@ void main(List<String> arguments) async {
   }
 }
 
-void watchDirectory(String rootPath) {
-  print('Watching "${p.relative(rootPath)}" ...');
-
-  final watcher = DirectoryWatcher(rootPath);
+Function(WatchEvent) createListener(rootPath, {noIntegration = false}) {
   final testRunner = TestRunner(rootPath);
   var canSkip = true;
   Timer timer;
-  // var clearer = ProcessManager();
 
-  watcher.events.listen((event) async {
-    if (!canSkip || isIgnore(event.path, rootPath) || isFunnyFile(event.path)) {
+  return (event) async {
+    if (!canSkip || isIgnore(event.path, rootPath)) {
       return;
     }
 
@@ -52,7 +50,7 @@ void watchDirectory(String rootPath) {
     }
 
     canSkip = false;
-    timer = Timer(Duration(seconds: 1), () {
+    timer = Timer(Duration(seconds: 3), () {
       canSkip = true;
     });
 
@@ -61,16 +59,109 @@ void watchDirectory(String rootPath) {
     var continueAllTests = true;
 
     final testFileMatch = findMatchingTest(event.path, rootPath);
+    if (testFileMatch.integrationTest) {
+      await prepareAllIntegrationTests(rootPath);
+    }
+
     if (testFileMatch.exists) {
-      continueAllTests = await testRunner.run(testFileMatch.path);
+      continueAllTests = await testRunner.run(
+          match: testFileMatch, noIntegration: noIntegration);
     }
 
     if (continueAllTests) {
-      await testRunner.run();
+      await testRunner.run(noIntegration: noIntegration);
     }
     canSkip = true;
     timer.cancel();
-  });
+  };
+}
+
+Future<void> watchDirectory(String rootPath, {noIntegration = false}) async {
+  print('Watching "${p.relative(rootPath)}" ...');
+
+  final listener = createListener(rootPath, noIntegration: noIntegration);
+
+  final directories = [
+    'lib',
+    'data',
+    'fonts',
+    'test',
+    'integration_test',
+  ];
+
+  for (final folder in directories) {
+    final fullPath = p.join(rootPath, folder);
+    if (await Directory(fullPath).exists()) {
+      final watcher = DirectoryWatcher(fullPath);
+      watcher.events.listen(listener);
+    }
+  }
+}
+
+Future<void> prepareAllIntegrationTests(String rootPath) async {
+  // allTestsFile.openWrite();
+  final testFiles = await getTestFiles(rootPath);
+
+  await writeAllTestsFile(
+    File(p.join(rootPath, 'integration_test', 'all_tests.dart')),
+    rootPath,
+    testFiles,
+  );
+  // write all_tests.dart
+}
+
+const allTestsFileTemplatea = '''
+// IMPORTS
+
+''';
+
+final sep = Platform.pathSeparator;
+
+Future<void> writeAllTestsFile(
+  File allTestsFile,
+  String rootPath,
+  List<File> testFiles,
+) async {
+  final testDir = p.join(rootPath, 'integration_test');
+  final imports = ["import 'package:integration_test/integration_test.dart';"];
+  final invokables = [];
+  for (final testFile in testFiles) {
+    var relativePath = p.relative(testFile.path, from: testDir);
+    if (sep != '/') {
+      relativePath = relativePath.replaceAll(sep, '/');
+    }
+    final invokable = invokableFromPath(relativePath);
+    imports.add("import './$relativePath' as $invokable;");
+    invokables.add('await $invokable.main();');
+  }
+  await allTestsFile.writeAsString('''
+${imports.join('\n')}
+
+Future<void> main() async {
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  ${invokables.join('\n  ')}
+}
+''');
+}
+
+String invokableFromPath(String path) {
+  return path.replaceAll('/', '_').replaceAll(RegExp(r'\.dart$'), '');
+}
+
+Future<List<File>> getTestFiles(rootPath) {
+  final dir = Directory(p.join(rootPath, 'integration_test'));
+  final files = <File>[];
+  final completer = Completer<List<File>>();
+  final lister = dir.list(recursive: true);
+  lister.listen(
+    (file) {
+      if (file is File && file.path.endsWith('_test.dart')) {
+        files.add(file);
+      }
+    },
+    onDone: () => completer.complete(files),
+  );
+  return completer.future;
 }
 
 Future<String> getPathFromArgsOrCurrent(List<String> args) async {

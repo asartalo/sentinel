@@ -1,3 +1,4 @@
+import 'package:path/path.dart' as p;
 import 'dart:io';
 
 final sep = Platform.pathSeparator;
@@ -8,12 +9,15 @@ bool isHidden(String path, String rootPath) {
   return reg.hasMatch(rootRelative);
 }
 
-var onlyPaths = <String>{'lib', 'test'};
+var onlyPaths = <String>{'lib', 'test', 'integration_test'};
 bool isIgnore(String path, String rootPath) {
-  if (isHidden(path, rootPath)) {
+  if (path == p.join(rootPath, 'integration_test', 'all_tests.dart')) {
     return true;
   }
-  return !onlyPaths.any((dir) => path.startsWith('$rootPath${sep}$dir'));
+  if (isHidden(path, rootPath) || isFunnyFile(path)) {
+    return true;
+  }
+  return !onlyPaths.any((dir) => path.startsWith(p.join(rootPath, dir)));
 }
 
 final funnyReg = RegExp(r'[^A-Za-z]$');
