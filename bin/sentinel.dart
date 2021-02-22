@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:args/args.dart';
-import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:sentinel/path_tests.dart';
 import 'package:sentinel/test_file_match.dart';
@@ -17,11 +16,16 @@ void main(List<String> arguments) async {
   try {
     final parser = ArgParser();
     parser.addFlag('no-integration', negatable: false, abbr: 'I');
+    parser.addOption('device', abbr: 'd', defaultsTo: 'all');
     final args = parser.parse(arguments);
     final pathArgs = args.rest;
     final fullPath = await getPathFromArgsOrCurrent(pathArgs);
 
-    await watchDirectory(fullPath, noIntegration: args['no-integration']);
+    await watchDirectory(
+      fullPath,
+      noIntegration: args['no-integration'],
+      device: args['device'],
+    );
   } catch (e) {
     exitCode = 1;
     stderr.writeln(e.toString());
@@ -29,10 +33,15 @@ void main(List<String> arguments) async {
   }
 }
 
-Function(WatchEvent) createListener(rootPath, {noIntegration = false}) {
+Function(WatchEvent) createListener(rootPath,
+    {noIntegration = false, device = 'all'}) {
   final testRunner = TestRunner(rootPath);
   var canSkip = true;
-  Timer timer;
+  late Timer timer;
+
+  if (noIntegration) {
+    print('Skipping integration tests');
+  }
 
   return (event) async {
     if (!canSkip || isIgnore(event.path, rootPath)) {
@@ -44,9 +53,7 @@ Function(WatchEvent) createListener(rootPath, {noIntegration = false}) {
 
     if (canSkip && testRunner.running) {
       testRunner.kill();
-      if (timer != null) {
-        timer.cancel();
-      }
+      timer.cancel();
     }
 
     canSkip = false;
@@ -65,21 +72,35 @@ Function(WatchEvent) createListener(rootPath, {noIntegration = false}) {
 
     if (testFileMatch.exists) {
       continueAllTests = await testRunner.run(
-          match: testFileMatch, noIntegration: noIntegration);
+        match: testFileMatch,
+        noIntegration: noIntegration,
+        device: device,
+      );
     }
 
     if (continueAllTests) {
-      await testRunner.run(noIntegration: noIntegration);
+      await testRunner.run(
+        noIntegration: noIntegration,
+        device: device,
+      );
     }
     canSkip = true;
     timer.cancel();
   };
 }
 
-Future<void> watchDirectory(String rootPath, {noIntegration = false}) async {
+Future<void> watchDirectory(
+  String rootPath, {
+  bool noIntegration = false,
+  String device = 'all',
+}) async {
   print('Watching "${p.relative(rootPath)}" ...');
 
-  final listener = createListener(rootPath, noIntegration: noIntegration);
+  final listener = createListener(
+    rootPath,
+    noIntegration: noIntegration,
+    device: device,
+  );
 
   final directories = [
     'lib',

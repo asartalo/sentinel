@@ -1,21 +1,23 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:io/io.dart';
 import 'package:sentinel/test_file_match.dart';
 
 class TestRunner {
   final String workingDir;
-  Process process;
-  Future<Null> _running;
-  final _manager = ProcessManager();
+  late Process? process;
+  Future<Null>? _running;
 
   TestRunner(this.workingDir);
 
   bool get running => _running != null;
 
-  Future<bool> _runIntegrationTest([String path = '']) async {
+  Future<bool> _runIntegrationTest(String path, {String device = 'all'}) async {
     final args = ['drive', '--driver=integration_test/driver.dart'];
+    if (device != 'all') {
+      args.add('-d');
+      args.add(device);
+    }
     if (path != '') {
       final relativePath = path.replaceFirst(workingDir, '');
       print('Running single integration test for $relativePath');
@@ -41,15 +43,16 @@ class TestRunner {
     return _execute(args);
   }
 
-  Future<bool> _execute(args) async {
+  Future<bool> _execute(List<String> args) async {
     var success = false;
     try {
-      process = await _manager.spawn(
+      process = await Process.start(
         'flutter',
         args,
         workingDirectory: workingDir,
+        mode: ProcessStartMode.inheritStdio,
       );
-      final exitCode = await process.exitCode;
+      final exitCode = await process!.exitCode;
       if (exitCode != 0) {
         print('Test exited with exit code: $exitCode');
         success = false;
@@ -65,7 +68,11 @@ class TestRunner {
     return success;
   }
 
-  Future<bool> run({TestFileMatch match, noIntegration = false}) async {
+  Future<bool> run({
+    TestFileMatch? match,
+    noIntegration = false,
+    String device = 'all',
+  }) async {
     if (_running != null) {
       await _running;
       return true;
@@ -78,10 +85,20 @@ class TestRunner {
     if (match == null) {
       // Run all tests
       success = await _runBasicTest() &&
-          (noIntegration ? true : await _runIntegrationTest());
+          (noIntegration
+              ? true
+              : await _runIntegrationTest(
+                  '',
+                  device: device,
+                ));
     } else {
       success = match.integrationTest
-          ? (noIntegration ? true : await _runIntegrationTest(match.path))
+          ? (noIntegration
+              ? true
+              : await _runIntegrationTest(
+                  match.path,
+                  device: device,
+                ))
           : await _runBasicTest(match.path);
     }
 
@@ -91,9 +108,9 @@ class TestRunner {
   }
 
   bool kill() {
-    if (process == null) {
-      return false;
+    if (process is Process) {
+      return process!.kill(ProcessSignal.sigkill);
     }
-    return process.kill(ProcessSignal.sigkill);
+    return false;
   }
 }

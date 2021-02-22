@@ -1,11 +1,16 @@
 import 'dart:io';
+
 import 'package:path/path.dart' as p;
 
 class TestFileMatch {
   final bool exists;
   final String path;
   final bool integrationTest;
-  TestFileMatch({this.exists, this.path, this.integrationTest = false});
+  TestFileMatch({
+    required this.exists,
+    required this.path,
+    this.integrationTest = false,
+  });
 
   @override
   String toString() {
