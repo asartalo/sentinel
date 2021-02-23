@@ -6,9 +6,10 @@ import 'package:sentinel/test_file_match.dart';
 class TestRunner {
   final String workingDir;
   late Process? process;
+  bool isFlutterProject;
   Future<Null>? _running;
 
-  TestRunner(this.workingDir);
+  TestRunner(this.workingDir, {this.isFlutterProject = true});
 
   bool get running => _running != null;
 
@@ -31,7 +32,11 @@ class TestRunner {
   }
 
   Future<bool> _runBasicTest([String path = '']) async {
-    final args = ['test', '--no-pub', '--suppress-analytics'];
+    final args = ['test'];
+    if (isFlutterProject) {
+      args.add('--no-pub');
+      args.add('--suppress-analytics');
+    }
     if (path != '') {
       final relativePath = path.replaceFirst(workingDir, '');
       print('Running single unit test for $relativePath');
@@ -43,11 +48,15 @@ class TestRunner {
     return _execute(args);
   }
 
+  String _mainCommand() {
+    return isFlutterProject ? 'flutter' : 'dart';
+  }
+
   Future<bool> _execute(List<String> args) async {
     var success = false;
     try {
       process = await Process.start(
-        'flutter',
+        _mainCommand(),
         args,
         workingDirectory: workingDir,
         mode: ProcessStartMode.inheritStdio,

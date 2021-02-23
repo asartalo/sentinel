@@ -21,9 +21,12 @@ void main(List<String> arguments) async {
     final pathArgs = args.rest;
     final fullPath = await getPathFromArgsOrCurrent(pathArgs);
 
+    final noIntegration = args['no-integration'] ||
+        !(await hasIntegrationTestDirectory(fullPath));
+
     await watchDirectory(
       fullPath,
-      noIntegration: args['no-integration'],
+      noIntegration: noIntegration,
       device: args['device'],
     );
   } catch (e) {
@@ -33,11 +36,31 @@ void main(List<String> arguments) async {
   }
 }
 
-Function(WatchEvent) createListener(rootPath,
-    {noIntegration = false, device = 'all'}) {
-  final testRunner = TestRunner(rootPath);
+Future<bool> hasIntegrationTestDirectory(String rootPath) {
+  return Directory(p.join(rootPath, 'integration_test')).exists();
+}
+
+bool isFlutterProject(String rootPath) {
+  final file = File(p.join(rootPath, 'pubspec.yaml'));
+  final fileContents = file.readAsStringSync();
+  return fileContents.contains('\nflutter:');
+}
+
+Function(WatchEvent) createListener(
+  rootPath, {
+  noIntegration = false,
+  device = 'all',
+}) {
+  final isFlutter = isFlutterProject(rootPath);
+  final testRunner = TestRunner(rootPath, isFlutterProject: isFlutter);
   var canSkip = true;
   late Timer timer;
+
+  if (isFlutter) {
+    print('Looks like a flutter project');
+  } else {
+    print('Looks like a regular dart project');
+  }
 
   if (noIntegration) {
     print('Skipping integration tests');
