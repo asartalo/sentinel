@@ -1,4 +1,22 @@
-A simple command-line application.
+# Sentinel
 
-Created from templates made available by Stagehand under a BSD-style
-[license](https://github.com/dart-lang/stagehand/blob/master/LICENSE).
+A Dart and Flutter project automatic test runner to run tests automatically as files change. Inspired by [Jest][Jest] and Ruby's [Guard][Guard].
+
+## Usage
+
+On your Dart or Flutter project's root directory run:
+
+```sh
+sentinel
+```
+
+After that, when you change any file under `lib` and `test` directory will automatically run a corresponding unit test if available or all tests.
+
+If you wish to also run integration tests, include `-i` option.
+
+```sh
+sentinel -i
+```
+
+[Jest]: https://jestjs.io
+[Guard]: https://github.com/guard/guard

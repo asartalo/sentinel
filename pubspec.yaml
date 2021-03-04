@@ -1,16 +1,16 @@
 name: sentinel
-description: A simple command-line application.
-# version: 1.0.0
-# homepage: https://www.example.com
+description: A Dart and Flutter project automatic test runner to run tests automatically as files change. Inspired by Jest and Ruby's Guard.
+version: 0.1.0
+homepage: https://github.com/asartalo/sentinel
 
 environment:
   sdk: '>=2.12.0-0 <3.0.0'
 
 dependencies:
-  watcher: ^1.0.0
-  dartz: ^0.10.0-nullsafety.1
   args: ^2.0.0
-  path: ^1.8.0
+  watcher: ^1.0.0
+  yaml: ^3.1.0
 
 dev_dependencies:
   lint: ^1.5.1
+  test: ^1.16.5

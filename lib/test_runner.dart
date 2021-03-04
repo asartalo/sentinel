@@ -1,15 +1,20 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:sentinel/test_file_match.dart';
+import 'package:sentinel/project.dart';
 
 class TestRunner {
-  final String workingDir;
+  final Project project;
   late Process? process;
-  bool isFlutterProject;
+  bool? _isFlutterProject;
   Future<Null>? _running;
 
-  TestRunner(this.workingDir, {this.isFlutterProject = true});
+  TestRunner(this.project);
+
+  Future<bool> get isFlutterProject async {
+    _isFlutterProject ??= await project.isFlutter();
+    return _isFlutterProject!;
+  }
 
   bool get running => _running != null;
 
@@ -20,7 +25,7 @@ class TestRunner {
       args.add(device);
     }
     if (path != '') {
-      final relativePath = path.replaceFirst(workingDir, '');
+      final relativePath = path.replaceFirst(project.rootPath, '');
       print('Running single integration test for $relativePath');
       args.add('--target=$path');
     } else {
@@ -33,12 +38,12 @@ class TestRunner {
 
   Future<bool> _runBasicTest([String path = '']) async {
     final args = ['test'];
-    if (isFlutterProject) {
+    if (await isFlutterProject) {
       args.add('--no-pub');
       args.add('--suppress-analytics');
     }
     if (path != '') {
-      final relativePath = path.replaceFirst(workingDir, '');
+      final relativePath = path.replaceFirst(project.rootPath, '');
       print('Running single unit test for $relativePath');
       args.add(path);
     } else {
@@ -48,17 +53,17 @@ class TestRunner {
     return _execute(args);
   }
 
-  String _mainCommand() {
-    return isFlutterProject ? 'flutter' : 'dart';
+  Future<String> _mainCommand() async {
+    return await isFlutterProject ? 'flutter' : 'dart';
   }
 
   Future<bool> _execute(List<String> args) async {
     var success = false;
     try {
       process = await Process.start(
-        _mainCommand(),
+        await _mainCommand(),
         args,
-        workingDirectory: workingDir,
+        workingDirectory: project.rootPath,
         mode: ProcessStartMode.inheritStdio,
       );
       final exitCode = await process!.exitCode;
