@@ -48,7 +48,6 @@ Future<Function(WatchEvent)> createListener(
   device = 'all',
 }) async {
   final isFlutter = await project.isFlutter();
-  final rootPath = project.rootPath;
   final testRunner = TestRunner(project);
   noIntegration = noIntegration || !await project.hasIntegrationTestDir();
   var canSkip = true;
@@ -65,7 +64,7 @@ Future<Function(WatchEvent)> createListener(
   }
 
   return (event) async {
-    if (!canSkip || isIgnore(event.path, rootPath)) {
+    if (!canSkip || isIgnore(event.path, project)) {
       return;
     }
 
