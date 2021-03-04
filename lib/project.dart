@@ -31,6 +31,9 @@ class TestFileMatch {
     }
     return false;
   }
+
+  @override
+  int get hashCode => 'TestFileMatch:$exists,$path,$integrationTest'.hashCode;
 }
 
 class Project {

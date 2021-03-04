@@ -8,12 +8,13 @@ import 'package:sentinel/project.dart';
 import 'package:sentinel/test_runner.dart';
 import 'package:watcher/watcher.dart';
 
-final fs = LocalFileSystem();
+const fs = LocalFileSystem();
 
-void main(List<String> arguments) async {
+// ignore_for_file: avoid_print
+Future<void> main(List<String> arguments) async {
   exitCode = 0;
 
-  stdout.encoding = SystemEncoding();
+  stdout.encoding = const SystemEncoding();
 
   try {
     final parser = ArgParser();
@@ -21,19 +22,18 @@ void main(List<String> arguments) async {
       'integration',
       negatable: false,
       abbr: 'i',
-      defaultsTo: false,
     );
     parser.addOption('device', abbr: 'd', defaultsTo: 'all');
     final args = parser.parse(arguments);
     final pathArgs = args.rest;
     final fullPath = await getPathFromArgsOrCurrent(pathArgs);
 
-    final noIntegration = !args['integration'];
+    final noIntegration = !(args['integration'] as bool);
 
     await watchDirectory(
       fullPath,
       noIntegration: noIntegration,
-      device: args['device'],
+      device: args['device'] as String,
     );
   } catch (e) {
     exitCode = 1;
@@ -44,12 +44,13 @@ void main(List<String> arguments) async {
 
 Future<Function(WatchEvent)> createListener(
   Project project, {
-  noIntegration = false,
-  device = 'all',
+  bool noIntegration = false,
+  String device = 'all',
 }) async {
   final isFlutter = await project.isFlutter();
   final testRunner = TestRunner(project);
-  noIntegration = noIntegration || !await project.hasIntegrationTestDir();
+  final noIntegrations =
+      noIntegration || !await project.hasIntegrationTestDir();
   var canSkip = true;
   late Timer timer;
 
@@ -63,7 +64,7 @@ Future<Function(WatchEvent)> createListener(
     print('Skipping integration tests');
   }
 
-  return (event) async {
+  return (WatchEvent event) async {
     if (!canSkip || isIgnore(event.path, project)) {
       return;
     }
@@ -77,7 +78,7 @@ Future<Function(WatchEvent)> createListener(
     }
 
     canSkip = false;
-    timer = Timer(Duration(seconds: 3), () {
+    timer = Timer(const Duration(seconds: 3), () {
       canSkip = true;
     });
 
@@ -100,7 +101,7 @@ Future<Function(WatchEvent)> createListener(
 
     if (continueAllTests) {
       await testRunner.run(
-        noIntegration: noIntegration,
+        noIntegration: noIntegrations,
         device: device,
       );
     }
@@ -187,7 +188,7 @@ String invokableFromPath(String path) {
 
 Future<String> getPathFromArgsOrCurrent(List<String> args) async {
   if (args.isNotEmpty) {
-    var dir = args.first;
+    final dir = args.first;
     if (!(await FileSystemEntity.isDirectory(dir))) {
       throw Exception('Error: Path "$dir" is not a directory');
     }

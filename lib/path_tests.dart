@@ -3,14 +3,14 @@ import 'dart:io';
 import 'package:sentinel/project.dart';
 
 final sep = Platform.pathSeparator;
-final reg = RegExp('\\${sep}\\..+');
+final reg = RegExp('\\$sep\\..+');
 bool isHidden(String path, String rootPath) {
   // Strip rootPath
   final rootRelative = path.replaceFirst(rootPath, '');
   return reg.hasMatch(rootRelative);
 }
 
-var onlyPaths = <String>{'lib', 'test', 'integration_test'};
+final onlyPaths = <String>{'lib', 'test', 'integration_test'};
 // ignore: todo
 // TODO: Refactor this one
 bool isIgnore(String path, Project project) {

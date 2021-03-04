@@ -3,11 +3,12 @@ import 'dart:io';
 
 import 'package:sentinel/project.dart';
 
+// ignore_for_file: avoid_print
 class TestRunner {
   final Project project;
   late Process? process;
   bool? _isFlutterProject;
-  Future<Null>? _running;
+  Future<void>? _running;
 
   TestRunner(this.project);
 
@@ -84,7 +85,7 @@ class TestRunner {
 
   Future<bool> run({
     TestFileMatch? match,
-    noIntegration = false,
+    bool noIntegration = false,
     String device = 'all',
   }) async {
     if (_running != null) {
@@ -92,27 +93,25 @@ class TestRunner {
       return true;
     }
 
-    final completer = Completer<Null>();
+    final completer = Completer<void>();
     _running = completer.future;
 
     var success = false;
     if (match == null) {
       // Run all tests
       success = await _runBasicTest() &&
-          (noIntegration
-              ? true
-              : await _runIntegrationTest(
-                  '',
-                  device: device,
-                ));
+          (noIntegration ||
+              await _runIntegrationTest(
+                '',
+                device: device,
+              ));
     } else {
       success = match.integrationTest
-          ? (noIntegration
-              ? true
-              : await _runIntegrationTest(
-                  match.path,
-                  device: device,
-                ))
+          ? (noIntegration ||
+              await _runIntegrationTest(
+                match.path,
+                device: device,
+              ))
           : await _runBasicTest(match.path);
     }
 
