@@ -51,7 +51,8 @@ Future<Function(WatchEvent)> createListener(
   final testRunner = TestRunner(project);
   final noIntegrations =
       noIntegration || !await project.hasIntegrationTestDir();
-  var canSkip = true;
+  bool canSkip = true;
+  bool debounce = false;
   late Timer timer;
 
   if (isFlutter) {
@@ -65,15 +66,23 @@ Future<Function(WatchEvent)> createListener(
   }
 
   return (WatchEvent event) async {
+    if (debounce) {
+      return;
+    }
     if (!canSkip || isIgnore(event.path, project)) {
       return;
     }
+
+    debounce = true;
+    Timer(const Duration(milliseconds: 300), () {
+      debounce = false;
+    });
 
     // Clear the screen before running tests
     print('\x1B[2J');
 
     if (canSkip && testRunner.running) {
-      testRunner.kill();
+      await testRunner.terminate();
       timer.cancel();
     }
 
@@ -106,6 +115,7 @@ Future<Function(WatchEvent)> createListener(
       );
     }
     canSkip = true;
+    debounce = false;
     timer.cancel();
   };
 }

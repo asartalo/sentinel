@@ -6,7 +6,7 @@ import 'package:sentinel/project.dart';
 // ignore_for_file: avoid_print
 class TestRunner {
   final Project project;
-  late Process? process;
+  Process? process;
   bool? _isFlutterProject;
   Future<void>? _running;
 
@@ -18,6 +18,7 @@ class TestRunner {
   }
 
   bool get running => _running != null;
+  int? get pid => process?.pid;
 
   Future<bool> _runIntegrationTest(String path, {String device = 'all'}) async {
     final args = ['drive', '--driver=integration_test/driver.dart'];
@@ -27,10 +28,10 @@ class TestRunner {
     }
     if (path != '') {
       final relativePath = path.replaceFirst(project.rootPath, '');
-      print('Running single integration test for $relativePath');
+      print('\nRunning single integration test for $relativePath');
       args.add('--target=$path');
     } else {
-      print('Running all integration tests');
+      print('\nRunning all integration tests');
       args.add('integration_test/all_tests.dart');
     }
 
@@ -45,10 +46,10 @@ class TestRunner {
     }
     if (path != '') {
       final relativePath = path.replaceFirst(project.rootPath, '');
-      print('Running single unit test for $relativePath');
+      print('\nRunning single unit test for $relativePath');
       args.add(path);
     } else {
-      print('Running all unit tests');
+      print('\nRunning all unit tests');
     }
 
     return _execute(args);
@@ -61,18 +62,33 @@ class TestRunner {
   Future<bool> _execute(List<String> args) async {
     var success = false;
     try {
+      final mode = ProcessStartMode.inheritStdio;
+      // final mode = ProcessStartMode.normal;
+      // final mode = ProcessStartMode.detachedWithStdio;
       process = await Process.start(
         await _mainCommand(),
         args,
         workingDirectory: project.rootPath,
-        mode: ProcessStartMode.inheritStdio,
+        mode: mode,
       );
-      final exitCode = await process!.exitCode;
-      if (exitCode != 0) {
-        print('Test exited with exit code: $exitCode');
-        success = false;
-      } else {
-        success = true;
+      if (process is Process) {
+        final proc = process!;
+        if (mode == ProcessStartMode.normal) {
+          proc.stdout.pipe(stdout);
+          proc.stderr.pipe(stdout);
+        }
+        final exitCode = await proc.exitCode;
+        if (exitCode != 0) {
+          if (exitCode == -9) {
+            // SIGKILL - we probably killed it ourselves
+            success = true;
+          } else {
+            print('Run exited with exit code: $exitCode');
+            success = false;
+          }
+        } else {
+          success = true;
+        }
       }
     } catch (e, stacktrace) {
       print(e);
@@ -120,9 +136,29 @@ class TestRunner {
     return success;
   }
 
-  bool kill() {
+  Future<bool> terminate() async {
     if (process is Process) {
-      return process!.kill(ProcessSignal.sigkill);
+      final proc = process!;
+      // SIGTERM - needs to be called twice. Use SIGKILL if SIGTERM is not necessary
+      proc.kill();
+      await Future.delayed(const Duration(milliseconds: 60));
+      final result = proc.kill();
+
+      if (_running is Future<void>) {
+        await _running;
+      }
+      return result;
+    }
+    return false;
+  }
+
+  Future<bool> kill() async {
+    if (process is Process) {
+      final result = process!.kill(ProcessSignal.sigkill);
+      if (_running is Future<void>) {
+        await _running;
+      }
+      return result;
     }
     return false;
   }
