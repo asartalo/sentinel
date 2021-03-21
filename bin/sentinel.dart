@@ -22,9 +22,25 @@ Future<void> main(List<String> arguments) async {
       'integration',
       negatable: false,
       abbr: 'i',
+      help: 'Include integration tests in test runs.',
     );
-    parser.addOption('device', abbr: 'd', defaultsTo: 'all');
+    parser.addOption(
+      'device',
+      abbr: 'd',
+      defaultsTo: 'all',
+      help: 'Specify the device to run integration tests against.',
+    );
+    parser.addFlag(
+      'help',
+      negatable: false,
+      abbr: 'h',
+      help: 'Display usage information.',
+    );
     final args = parser.parse(arguments);
+    if (args['help'] as bool) {
+      printHelp(parser);
+      return;
+    }
     final pathArgs = args.rest;
     final fullPath = await getPathFromArgsOrCurrent(pathArgs);
 
@@ -206,4 +222,11 @@ Future<String> getPathFromArgsOrCurrent(List<String> args) async {
     return fs.path.canonicalize(dir);
   }
   return fs.path.canonicalize(Directory.current.path);
+}
+
+void printHelp(ArgParser parser) {
+  print('A Dart and Flutter project automated test runner.');
+  print('\nUsage: sentinel [<flags>] <directory>\n');
+  print(parser.usage);
+  print('\nSee https://pub.dev/packages/sentinel for more information.');
 }
