@@ -5,6 +5,7 @@ import 'package:args/args.dart';
 import 'package:file/local.dart';
 import 'package:sentinel/path_tests.dart';
 import 'package:sentinel/project.dart';
+import 'package:sentinel/sentinel_front.dart';
 import 'package:sentinel/test_runner.dart';
 import 'package:watcher/watcher.dart';
 
@@ -13,43 +14,21 @@ const fs = LocalFileSystem();
 // ignore_for_file: avoid_print
 Future<void> main(List<String> arguments) async {
   exitCode = 0;
-
   stdout.encoding = const SystemEncoding();
+  final front = SentinelFront();
 
   try {
-    final parser = ArgParser();
-    parser.addFlag(
-      'integration',
-      negatable: false,
-      abbr: 'i',
-      help: 'Include integration tests in test runs.',
-    );
-    parser.addOption(
-      'device',
-      abbr: 'd',
-      defaultsTo: 'all',
-      help: 'Specify the device to run integration tests against.',
-    );
-    parser.addFlag(
-      'help',
-      negatable: false,
-      abbr: 'h',
-      help: 'Display usage information.',
-    );
-    final args = parser.parse(arguments);
-    if (args['help'] as bool) {
-      printHelp(parser);
+    final result = front.parse(arguments);
+    if (result.command == Command.help) {
+      print(front.helpText());
       return;
     }
-    final pathArgs = args.rest;
-    final fullPath = await getPathFromArgsOrCurrent(pathArgs);
-
-    final noIntegration = !(args['integration'] as bool);
+    final fullPath = await getCanonicalPath(result.directory);
 
     await watchDirectory(
       fullPath,
-      noIntegration: noIntegration,
-      device: args['device'] as String,
+      noIntegration: !result.integration,
+      device: result.device,
     );
   } catch (e) {
     exitCode = 1;
@@ -212,9 +191,8 @@ String invokableFromPath(String path) {
   return path.replaceAll('/', '_').replaceAll(RegExp(r'\.dart$'), '');
 }
 
-Future<String> getPathFromArgsOrCurrent(List<String> args) async {
-  if (args.isNotEmpty) {
-    final dir = args.first;
+Future<String> getCanonicalPath(String dir) async {
+  if (dir != '') {
     if (!(await FileSystemEntity.isDirectory(dir))) {
       throw Exception('Error: Path "$dir" is not a directory');
     }

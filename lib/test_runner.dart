@@ -73,14 +73,18 @@ class TestRunner {
       );
       if (process is Process) {
         final proc = process!;
-        if (mode == ProcessStartMode.normal) {
-          proc.stdout.pipe(stdout);
-          proc.stderr.pipe(stdout);
-        }
+        final ioWait = mode == ProcessStartMode.normal
+            ? Future.wait([
+                proc.stdout.pipe(stdout),
+                proc.stderr.pipe(stdout),
+              ])
+            : Future.value(true);
         final exitCode = await proc.exitCode;
+        await ioWait;
         if (exitCode != 0) {
-          if (exitCode == -9) {
-            // SIGKILL - we probably killed it ourselves
+          if (exitCode == -9 || exitCode == -15) {
+            // -9 is SIGKILL - we probably killed it ourselves
+            // -15 is SIGTERM - we probably terminated it ourselves
             success = true;
           } else {
             print('Run exited with exit code: $exitCode');
