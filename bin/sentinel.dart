@@ -90,17 +90,20 @@ Future<Function(WatchEvent)> createListener(
 
     var continueAllTests = true;
 
-    final testFileMatch = await project.findMatchingTest(event.path);
-    if (testFileMatch.integrationTest) {
-      await prepareAllIntegrationTests(project);
-    }
+    // Skip to running all tests file is removed
+    if (event.type != ChangeType.REMOVE) {
+      final testFileMatch = await project.findMatchingTest(event.path);
+      if (testFileMatch.integrationTest) {
+        await prepareAllIntegrationTests(project);
+      }
 
-    if (testFileMatch.exists) {
-      continueAllTests = await testRunner.run(
-        match: testFileMatch,
-        noIntegration: noIntegration,
-        device: device,
-      );
+      if (testFileMatch.exists) {
+        continueAllTests = await testRunner.run(
+          match: testFileMatch,
+          noIntegration: noIntegration,
+          device: device,
+        );
+      }
     }
 
     if (continueAllTests) {
