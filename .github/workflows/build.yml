@@ -131,14 +131,6 @@ jobs:
         output="${output//$'\r'/'%0D'}"
         echo "::set-output name=summary::$output"
 
-    - name: Changelog summary
-      if: steps.shouldRelease.outputs.value == 'yes'
-      run: |
-        read -r -d '' TEMPVAR << TEMPVAREOF
-        "${{ steps.changelog.outputs.summary }}"
-        TEMPVAREOF
-        echo $TEMPVAR
-
     - name: Commit Release
       if: steps.shouldRelease.outputs.value == 'yes'
       run: |
