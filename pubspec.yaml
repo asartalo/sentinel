@@ -15,6 +15,7 @@ dependencies:
 
 dev_dependencies:
   conventional: ^0.2.4
+  coverage: ^1.0.1
   git_hooks:
     git:
       url: https://github.com/asartalo/git_hooks.git
