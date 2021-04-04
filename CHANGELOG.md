@@ -1,3 +1,9 @@
+# 2.1.1 (2021-04-04)
+
+## Bug Fixes
+
+- do not run tests for removed files ([3e1419c](commit/3e1419c))
+
 ## 2.0.1
 
 - Documentation and usage information
