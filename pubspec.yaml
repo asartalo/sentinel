@@ -14,6 +14,11 @@ dependencies:
   yaml: ^3.1.0
 
 dev_dependencies:
+  conventional: ^0.2.4
+  git_hooks:
+    git:
+      url: https://github.com/asartalo/git_hooks.git
+      ref: null-safety-2
   lint: ^1.5.1
   test: ^1.16.5
 

@@ -57,6 +57,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.15.0"
+  conventional:
+    dependency: "direct dev"
+    description:
+      name: conventional
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.2.4"
   convert:
     dependency: transitive
     description:
@@ -92,6 +99,15 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "6.1.0"
+  git_hooks:
+    dependency: "direct dev"
+    description:
+      path: "."
+      ref: null-safety-2
+      resolved-ref: "2b9b7359d387882b672126ef905bbb497f1de00b"
+      url: "https://github.com/asartalo/git_hooks.git"
+    source: git
+    version: "0.2.0"
   glob:
     dependency: transitive
     description:
@@ -190,6 +206,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.10.0"
+  petitparser:
+    dependency: transitive
+    description:
+      name: petitparser
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "4.0.2"
   pool:
     dependency: transitive
     description:
