@@ -19,9 +19,13 @@ On your Dart or Flutter project's root directory run:
 $ sentinel
 ```
 
-After that, when you change any file under `lib` and `test` directory will automatically run a corresponding unit test if available or all tests.
+After that, when you change any file under `lib` and `test` directory, sentinel will automatically run a corresponding unit test if available or all tests.
 
-If you wish to also run integration tests, include `-i` option.
+### Running Integration Tests
+
+**Warning:** this feature is experimental.
+
+If you wish to also run integration tests like in a flutter project, use the `-i` option.
 
 ```sh
 $ sentinel -i
