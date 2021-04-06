@@ -56,7 +56,7 @@ class Project {
 
   Future<bool> hasTestDir() => _dirExists(_testDir);
   Future<bool> hasIntegrationTestDir() => _dirExists(_iTestDir);
-  String get integrationTesDirPath => _fullPath(_iTestDir);
+  String get integrationTestDirPath => _fullPath(_iTestDir);
   String get tesDirPath => _fullPath(_testDir);
 
   Future<bool> isFlutter() async {
@@ -105,7 +105,7 @@ class Project {
   }
 
   Future<List<File>> getIntegrationTestFiles() {
-    final dir = fs.directory(integrationTesDirPath);
+    final dir = fs.directory(integrationTestDirPath);
     final files = <File>[];
     final completer = Completer<List<File>>();
     final lister = dir.list(recursive: true);
