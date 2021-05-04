@@ -3,45 +3,37 @@ import 'dart:async';
 import 'package:yaml/yaml.dart';
 import 'package:file/file.dart';
 
+import 'test_file_match.dart';
+
 const _testDir = 'test';
 const _iTestDir = 'integration_test';
 const _pubFile = 'pubspec.yaml';
 
-class TestFileMatch {
-  final bool exists;
-  final String path;
-  final bool integrationTest;
-  TestFileMatch({
-    required this.exists,
-    required this.path,
-    this.integrationTest = false,
-  });
+abstract class Project {
+  FileSystem get fs;
+  String get rootPath;
+  Future<bool> hasTestDir();
+  Future<bool> hasIntegrationTestDir();
+  String get integrationTestDirPath;
+  String get tesDirPath;
+  Future<bool> isFlutter();
+  Future<String?> unitTestFor(String path);
+  Future<TestFileMatch> findMatchingTest(String path);
+  Future<List<File>> getIntegrationTestFiles();
 
-  @override
-  String toString() {
-    return 'path: $path,\nexists: $exists\nintegrationTest: $integrationTest';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    if (other is TestFileMatch) {
-      return exists == other.exists &&
-          path == other.path &&
-          integrationTest == other.integrationTest;
-    }
-    return false;
-  }
-
-  @override
-  int get hashCode => 'TestFileMatch:$exists,$path,$integrationTest'.hashCode;
+  factory Project(String rootPath, FileSystem fs) => _Project(rootPath, fs);
 }
 
-class Project {
+class _Project implements Project {
+  @override
   final FileSystem fs;
+
+  @override
   final String rootPath;
+
   late final RegExp _rootRegexp;
 
-  Project(this.rootPath, this.fs)
+  _Project(this.rootPath, this.fs)
       : _rootRegexp = RegExp('^${fs.path.separator}');
 
   File get pubspecFile => fs.file(_fullPath(_pubFile));
@@ -54,11 +46,19 @@ class Project {
     return fs.path.join(rootPath, path, part2, part3);
   }
 
+  @override
   Future<bool> hasTestDir() => _dirExists(_testDir);
+
+  @override
   Future<bool> hasIntegrationTestDir() => _dirExists(_iTestDir);
+
+  @override
   String get integrationTestDirPath => _fullPath(_iTestDir);
+
+  @override
   String get tesDirPath => _fullPath(_testDir);
 
+  @override
   Future<bool> isFlutter() async {
     if (await pubspecFile.exists()) {
       final pubspec = loadYaml(await pubspecFile.readAsString());
@@ -69,6 +69,7 @@ class Project {
     return false;
   }
 
+  @override
   Future<String?> unitTestFor(String path) async {
     final absolutePath = fs.path.absolute(path);
     final fromLibPath = absolutePath
@@ -86,6 +87,7 @@ class Project {
 
   final _testReg = RegExp(r'_test.dart$');
   final _libDartReg = RegExp(r'lib[\/\\].+\.dart$');
+  @override
   Future<TestFileMatch> findMatchingTest(String path) async {
     if (_testReg.hasMatch(path)) {
       final integrationTest = path.startsWith(_fullPath(_iTestDir));
@@ -104,6 +106,7 @@ class Project {
     return TestFileMatch(exists: false, path: '');
   }
 
+  @override
   Future<List<File>> getIntegrationTestFiles() {
     final dir = fs.directory(integrationTestDirPath);
     final files = <File>[];
