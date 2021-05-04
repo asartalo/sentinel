@@ -1,6 +1,7 @@
 import 'package:file/file.dart';
 import 'package:file/memory.dart';
 import 'package:sentinel/project.dart';
+import 'package:sentinel/test_file_match.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -122,9 +123,6 @@ flutter:
     });
 
     group('.findMatchingTest()', () {
-      // late File libFile;
-      // late File unitTestFile;
-      // late File unitTestFile;
       test('it returns a mismatch if it is not a lib file', () async {
         expect(
           await project.findMatchingTest('some/file/that.dart'),
@@ -188,6 +186,29 @@ flutter:
             ),
           );
         });
+      });
+    });
+
+    group('.getIntegrationTestFiles()', () {
+      late String testFile1;
+      late String testFile2;
+      late List<String> files;
+
+      setUp(() async {
+        testFile1 = (await _createFile('integration_test/foo_test.dart')).path;
+        testFile2 = (await _createFile('integration_test/bar_test.dart')).path;
+        await _createFile(
+            'integration_test/helper.dart'); // ignores helper files
+
+        files = (await project.getIntegrationTestFiles())
+            .map((e) => e.path)
+            .toList();
+      });
+
+      test('it returns all test files', () {
+        expect(files.length, equals(2));
+        expect(files, contains(testFile1));
+        expect(files, contains(testFile2));
       });
     });
   });

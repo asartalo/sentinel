@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:sentinel/project.dart';
 
+import 'test_file_match.dart';
+
 // ignore_for_file: avoid_print
 class TestRunner {
   final Project project;
