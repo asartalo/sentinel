@@ -6,19 +6,35 @@ import 'package:sentinel/project.dart';
 import 'test_file_match.dart';
 
 // ignore_for_file: avoid_print
-class TestRunner {
+
+abstract class TestRunner {
+  Future<bool> run({
+    TestFileMatch? match,
+    bool noIntegration = false,
+    String device = 'all',
+  });
+
+  bool get running;
+  Future<bool> terminate();
+  Future<bool> kill();
+
+  factory TestRunner(Project project) => _TestRunner(project);
+}
+
+class _TestRunner implements TestRunner {
   final Project project;
   Process? process;
   bool? _isFlutterProject;
   Future<void>? _running;
 
-  TestRunner(this.project);
+  _TestRunner(this.project);
 
   Future<bool> get isFlutterProject async {
     _isFlutterProject ??= await project.isFlutter();
     return _isFlutterProject!;
   }
 
+  @override
   bool get running => _running != null;
   int? get pid => process?.pid;
 
@@ -105,6 +121,7 @@ class TestRunner {
     return success;
   }
 
+  @override
   Future<bool> run({
     TestFileMatch? match,
     bool noIntegration = false,
@@ -142,6 +159,7 @@ class TestRunner {
     return success;
   }
 
+  @override
   Future<bool> terminate() async {
     if (process is Process) {
       final proc = process!;
@@ -158,6 +176,7 @@ class TestRunner {
     return false;
   }
 
+  @override
   Future<bool> kill() async {
     if (process is Process) {
       final result = process!.kill(ProcessSignal.sigkill);

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:file/local.dart';
 import 'package:sentinel/printer.dart';
+import 'package:sentinel/project.dart';
 import 'package:sentinel/sentinel_front.dart';
 import 'package:sentinel/sentinel_runner.dart';
 
@@ -15,7 +16,6 @@ Future<void> main(List<String> arguments) async {
   exitCode = 0;
   stdout.encoding = const SystemEncoding();
   final front = SentinelFront();
-  final runner = SentinelRunner(fs: fs, printer: printer, sep: sep);
 
   try {
     final result = front.parse(arguments);
@@ -24,9 +24,10 @@ Future<void> main(List<String> arguments) async {
       return;
     }
     final fullPath = await getCanonicalPath(result.directory);
+    final project = Project(fullPath, fs);
+    final runner = SentinelRunner(project: project, printer: printer, sep: sep);
 
     await runner.watchDirectory(
-      fullPath,
       noIntegration: !result.integration,
       device: result.device,
     );

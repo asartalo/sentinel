@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:args/args.dart';
-import 'package:file/file.dart';
+import 'package:sentinel/aitf_builder.dart';
 import 'package:sentinel/test_runner.dart';
 import 'package:watcher/watcher.dart';
 
@@ -9,40 +9,30 @@ import 'path_tests.dart';
 import 'printer.dart';
 import 'project.dart';
 
-const allTestsFileTemplate = '''
-  // IMPORTS
-
-  ''';
+typedef AllTestsBuilder = Future<void> Function(Project project);
 
 class SentinelRunner {
   final Printer printer;
-  final FileSystem fs;
   final String sep;
+  final Project project;
+  final AllTestsBuilder allTestsBuilder;
 
-  SentinelRunner({required this.printer, required this.fs, this.sep = '/'});
+  SentinelRunner(
+      {required this.printer,
+      required this.project,
+      this.sep = '/',
+      this.allTestsBuilder = aitfBuilder});
 
-  Future<Function(WatchEvent)> createListener(
-    Project project, {
-    bool noIntegration = false,
+  Function(WatchEvent) createListener({
+    required TestRunner testRunner,
+    required bool isFlutter,
     String device = 'all',
-  }) async {
-    final isFlutter = await project.isFlutter();
-    final testRunner = TestRunner(project);
-    final noIntegrations =
-        noIntegration || !await project.hasIntegrationTestDir();
+    bool noIntegration = false,
+  }) {
+    Timer? timer;
+
     bool canSkip = true;
     bool debounce = false;
-    late Timer timer;
-
-    if (isFlutter) {
-      printer.println('Looks like a flutter project');
-    } else {
-      printer.println('Looks like a regular Dart project');
-    }
-
-    if (noIntegration) {
-      printer.println('Skipping integration tests');
-    }
 
     return (WatchEvent event) async {
       if (debounce) {
@@ -60,15 +50,17 @@ class SentinelRunner {
       // Clear the screen before running tests
       printer.println('\x1B[2J');
 
-      if (canSkip && testRunner.running) {
-        await testRunner.terminate();
-        timer.cancel();
-      }
-
       canSkip = false;
       timer = Timer(const Duration(seconds: 3), () {
         canSkip = true;
       });
+
+      if (canSkip && testRunner.running) {
+        await testRunner.terminate();
+        if (timer is Timer) {
+          timer!.cancel();
+        }
+      }
 
       printer.println('TEST RUN: ${event.type} ${event.path}\n');
 
@@ -92,26 +84,44 @@ class SentinelRunner {
 
       if (continueAllTests) {
         await testRunner.run(
-          noIntegration: noIntegrations,
+          noIntegration: noIntegration,
           device: device,
         );
       }
       canSkip = true;
       debounce = false;
-      timer.cancel();
+      if (timer is Timer) {
+        timer!.cancel();
+      }
     };
   }
 
-  Future<void> watchDirectory(
-    String rootPath, {
+  Future<void> watchDirectory({
     bool noIntegration = false,
     String device = 'all',
   }) async {
-    printer.println('Watching "$rootPath" ...');
+    printer.println('Watching "${project.rootPath}" ...');
 
-    final project = Project(rootPath, fs);
-    final listener = await createListener(
-      project,
+    final isFlutter = await project.isFlutter();
+
+    final noIntegrations =
+        noIntegration || !await project.hasIntegrationTestDir();
+
+    if (isFlutter) {
+      printer.println('Looks like a flutter project');
+    } else {
+      printer.println('Looks like a regular Dart project');
+    }
+
+    if (noIntegration) {
+      printer.println('Skipping integration tests');
+    }
+
+    final testRunner = TestRunner(project);
+
+    final listener = createListener(
+      testRunner: testRunner,
+      isFlutter: isFlutter,
       noIntegration: noIntegration,
       device: device,
     );
@@ -125,52 +135,16 @@ class SentinelRunner {
     ];
 
     for (final folder in directories) {
-      final fullPath = fs.path.join(rootPath, folder);
-      if (await fs.directory(fullPath).exists()) {
-        final watcher = DirectoryWatcher(fullPath);
+      final dir = project.getDir(folder);
+      if (await dir.exists()) {
+        final watcher = DirectoryWatcher(dir.path);
         watcher.events.listen(listener);
       }
     }
   }
 
   Future<void> prepareAllIntegrationTests(Project project) async {
-    await writeAllTestsFile(
-      fs.file(fs.path.join(project.integrationTestDirPath, 'all_tests.dart')),
-      project,
-    );
-  }
-
-  Future<void> writeAllTestsFile(
-    File allTestsFile,
-    Project project,
-  ) async {
-    final testFiles = await project.getIntegrationTestFiles();
-    final testDir = project.integrationTestDirPath;
-    final imports = [
-      "import 'package:integration_test/integration_test.dart';"
-    ];
-    final invokables = [];
-    for (final testFile in testFiles) {
-      var relativePath = fs.path.relative(testFile.path, from: testDir);
-      if (sep != '/') {
-        relativePath = relativePath.replaceAll(sep, '/');
-      }
-      final invokable = invokableFromPath(relativePath);
-      imports.add("import './$relativePath' as $invokable;");
-      invokables.add('await $invokable.main();');
-    }
-    await allTestsFile.writeAsString('''
-  ${imports.join('\n')}
-
-  Future<void> main() async {
-    IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-    ${invokables.join('\n  ')}
-  }
-  ''');
-  }
-
-  String invokableFromPath(String path) {
-    return path.replaceAll('/', '_').replaceAll(RegExp(r'\.dart$'), '');
+    await allTestsBuilder(project);
   }
 
   void printHelp(ArgParser parser) {

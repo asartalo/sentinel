@@ -17,7 +17,7 @@ void main() {
       // Create a pubspec.yaml;
     });
 
-    group('.hasTestDir()', () {
+    group('hasTestDir()', () {
       test('returns false when there is no test directory', () async {
         expect(await project.hasTestDir(), false);
       });
@@ -28,7 +28,7 @@ void main() {
       });
     });
 
-    group('.hasIntegrationTestDir()', () {
+    group('hasIntegrationTestDir()', () {
       test('returns false when there is no integration test directory',
           () async {
         expect(await project.hasIntegrationTestDir(), false);
@@ -43,7 +43,7 @@ void main() {
       });
     });
 
-    group('.isFlutter()', () {
+    group('isFlutter()', () {
       test('returns false when there is no pubspec.yaml file', () async {
         expect(await project.isFlutter(), false);
       });
@@ -106,7 +106,7 @@ flutter:
       return dir.childFile(fs.path.basename(path)).create();
     }
 
-    group('.unitTestFor()', () {
+    group('unitTestFor()', () {
       late File libFile;
       setUp(() async {
         libFile = await _createFile('lib/foo/bar.dart');
@@ -122,7 +122,7 @@ flutter:
       });
     });
 
-    group('.findMatchingTest()', () {
+    group('findMatchingTest()', () {
       test('it returns a mismatch if it is not a lib file', () async {
         expect(
           await project.findMatchingTest('some/file/that.dart'),
@@ -189,7 +189,7 @@ flutter:
       });
     });
 
-    group('.getIntegrationTestFiles()', () {
+    group('getIntegrationTestFiles()', () {
       late String testFile1;
       late String testFile2;
       late List<String> files;
@@ -209,6 +209,38 @@ flutter:
         expect(files.length, equals(2));
         expect(files, contains(testFile1));
         expect(files, contains(testFile2));
+      });
+    });
+
+    group('allIntegrationTestFile()', () {
+      test('it can get file from project root', () async {
+        await fs.directory(fs.path.join(rootDir, 'integration_test')).create();
+        final file = fs
+            .directory(fs.path.join(rootDir, 'integration_test'))
+            .childFile('all_tests.dart');
+        await file.writeAsString('////');
+        final found = project.allIntegrationTestFile();
+        expect(await found.readAsString(), await file.readAsString());
+      });
+    });
+
+    group('getDir()', () {
+      test('it can get a directory', () async {
+        final directory =
+            await fs.directory(fs.path.join(rootDir, 'foo')).create();
+        expect(project.getDir('foo').path, equals(directory.path));
+      });
+    });
+
+    group('getRelativePath()', () {
+      test('it can get relative path of file', () async {
+        final file = (await fs.directory(fs.path.join(rootDir, 'foo')).create())
+            .childFile('bar.txt');
+        await file.writeAsString(' ');
+        expect(
+          project.getRelativePath(file.path, from: rootDir),
+          equals('foo/bar.txt'),
+        );
       });
     });
   });
