@@ -20,6 +20,9 @@ abstract class Project {
   Future<String?> unitTestFor(String path);
   Future<TestFileMatch> findMatchingTest(String path);
   Future<List<File>> getIntegrationTestFiles();
+  File allIntegrationTestFile();
+  Directory getDir(String path);
+  String getRelativePath(String path, {required String from});
 
   factory Project(String rootPath, FileSystem fs) => _Project(rootPath, fs);
 }
@@ -121,5 +124,20 @@ class _Project implements Project {
       onDone: () => completer.complete(files),
     );
     return completer.future;
+  }
+
+  @override
+  File allIntegrationTestFile() {
+    return fs.directory(integrationTestDirPath).childFile('all_tests.dart');
+  }
+
+  @override
+  Directory getDir(String path) {
+    return fs.directory(rootPath).childDirectory(path);
+  }
+
+  @override
+  String getRelativePath(String path, {required String from}) {
+    return fs.path.relative(path, from: from);
   }
 }
