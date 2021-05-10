@@ -1,5 +1,7 @@
 # Sentinel
 
+[![build](https://github.com/asartalo/sentinel/actions/workflows/build.yml/badge.svg)](https://github.com/asartalo/sentinel/actions/workflows/build.yml) [![Coverage Status](https://coveralls.io/repos/github/asartalo/sentinel/badge.svg?branch=main)](https://coveralls.io/github/asartalo/sentinel?branch=main) [![Pub](https://img.shields.io/pub/v/sentinel.svg)](https://pub.dev/packages/sentinel)
+
 A Dart and Flutter project automatic test runner to run tests automatically as files change. Inspired by [Jest][Jest] and Ruby's [Guard][Guard].
 
 
