@@ -4,15 +4,19 @@ import 'package:sentinel/project.dart';
 import 'package:sentinel/test_file_match.dart';
 import 'package:test/test.dart';
 
+import 'helpers.dart';
+
 void main() {
   group('Project', () {
     late Project project;
     late FileSystem fs;
     late String rootDir;
+    late FileHelpers helper;
 
     setUp(() {
       fs = MemoryFileSystem();
       rootDir = fs.systemTempDirectory.path;
+      helper = FileHelpers(fs, rootDir);
       project = Project(rootDir, fs);
       // Create a pubspec.yaml;
     });
@@ -86,30 +90,10 @@ flutter:
       });
     });
 
-    Future<Directory> _createDirectory(String path) async {
-      final paths = path.split('/');
-      var currentPath = rootDir;
-      late Directory currentDir;
-      for (final part in paths) {
-        currentPath = fs.path.join(currentPath, part);
-        currentDir = await fs.directory(currentPath).create();
-      }
-      return currentDir;
-    }
-
-    Future<File> _createFile(String path) async {
-      final dirPath = fs.path.dirname(path);
-      var dir = fs.directory(dirPath);
-      if (!await dir.exists()) {
-        dir = await _createDirectory(dirPath);
-      }
-      return dir.childFile(fs.path.basename(path)).create();
-    }
-
     group('unitTestFor()', () {
       late File libFile;
       setUp(() async {
-        libFile = await _createFile('lib/foo/bar.dart');
+        libFile = await helper.createFile('lib/foo/bar.dart');
       });
 
       test('returns null if no test file is available', () async {
@@ -117,7 +101,7 @@ flutter:
       });
 
       test('returns file path of test file if it is available', () async {
-        final testFile = await _createFile('test/foo/bar_test.dart');
+        final testFile = await helper.createFile('test/foo/bar_test.dart');
         expect(await project.unitTestFor(libFile.path), testFile.path);
       });
     });
@@ -135,7 +119,7 @@ flutter:
       group('when file is a dart file under lib', () {
         late File libFile;
         setUp(() async {
-          libFile = await _createFile('lib/foo/library.dart');
+          libFile = await helper.createFile('lib/foo/library.dart');
         });
 
         test('it returns a mismatch if a unit test does not exist', () async {
@@ -149,7 +133,8 @@ flutter:
         });
 
         test('it returns a match if a unit test exists', () async {
-          final testFile = await _createFile('test/foo/library_test.dart');
+          final testFile =
+              await helper.createFile('test/foo/library_test.dart');
           expect(
             await project.findMatchingTest(libFile.path),
             TestFileMatch(
@@ -162,7 +147,8 @@ flutter:
 
       group('when file is a unit test file', () {
         test('it returns a match if a unit test exists', () async {
-          final testFile = await _createFile('test/foo/library_test.dart');
+          final testFile =
+              await helper.createFile('test/foo/library_test.dart');
           expect(
             await project.findMatchingTest(testFile.path),
             TestFileMatch(
@@ -176,7 +162,7 @@ flutter:
       group('when file is an integration test file', () {
         test('it returns a match', () async {
           final testFile =
-              await _createFile('integration_test/screen_test.dart');
+              await helper.createFile('integration_test/screen_test.dart');
           expect(
             await project.findMatchingTest(testFile.path),
             TestFileMatch(
@@ -195,10 +181,12 @@ flutter:
       late List<String> files;
 
       setUp(() async {
-        testFile1 = (await _createFile('integration_test/foo_test.dart')).path;
-        testFile2 = (await _createFile('integration_test/bar_test.dart')).path;
-        await _createFile(
-            'integration_test/helper.dart'); // ignores helper files
+        testFile1 =
+            (await helper.createFile('integration_test/foo_test.dart')).path;
+        testFile2 =
+            (await helper.createFile('integration_test/bar_test.dart')).path;
+        await helper
+            .createFile('integration_test/helper.dart'); // ignores helper files
 
         files = (await project.getIntegrationTestFiles())
             .map((e) => e.path)

@@ -10,6 +10,8 @@ import 'printer.dart';
 import 'project.dart';
 
 typedef AllTestsBuilder = Future<void> Function(Project project);
+typedef Listener = Function(WatchEvent);
+typedef Watch = Function(String, Listener);
 
 class SentinelRunner {
   final Printer printer;
@@ -23,7 +25,7 @@ class SentinelRunner {
       this.sep = '/',
       this.allTestsBuilder = aitfBuilder});
 
-  Function(WatchEvent) createListener({
+  Listener createListener({
     required TestRunner testRunner,
     required bool isFlutter,
     String device = 'all',
@@ -99,7 +101,9 @@ class SentinelRunner {
   Future<void> watchDirectory({
     bool noIntegration = false,
     String device = 'all',
+    Watch? watch,
   }) async {
+    watch ??= watchDefault;
     printer.println('Watching "${project.rootPath}" ...');
 
     final isFlutter = await project.isFlutter();
@@ -113,7 +117,7 @@ class SentinelRunner {
       printer.println('Looks like a regular Dart project');
     }
 
-    if (noIntegration) {
+    if (noIntegrations) {
       printer.println('Skipping integration tests');
     }
 
@@ -122,7 +126,7 @@ class SentinelRunner {
     final listener = createListener(
       testRunner: testRunner,
       isFlutter: isFlutter,
-      noIntegration: noIntegration,
+      noIntegration: noIntegrations,
       device: device,
     );
 
@@ -137,10 +141,14 @@ class SentinelRunner {
     for (final folder in directories) {
       final dir = project.getDir(folder);
       if (await dir.exists()) {
-        final watcher = DirectoryWatcher(dir.path);
-        watcher.events.listen(listener);
+        watch(dir.path, listener);
       }
     }
+  }
+
+  void watchDefault(String path, Listener listener) {
+    final watcher = DirectoryWatcher(path);
+    watcher.events.listen(listener);
   }
 
   Future<void> prepareAllIntegrationTests(Project project) async {
