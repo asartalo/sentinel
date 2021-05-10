@@ -4,39 +4,24 @@ import 'package:sentinel/aitf_builder.dart';
 import 'package:sentinel/project.dart';
 import 'package:test/test.dart';
 
+import 'helpers.dart';
+
 void main() {
   group(aitfBuilder, () {
     late FileSystem fs;
     late String rootDir;
     late Project project;
-
-    Future<Directory> _createDirectory(String path) async {
-      final paths = path.split('/');
-      var currentPath = rootDir;
-      late Directory currentDir;
-      for (final part in paths) {
-        currentPath = fs.path.join(currentPath, part);
-        currentDir = await fs.directory(currentPath).create();
-      }
-      return currentDir;
-    }
-
-    Future<File> _createFile(String path) async {
-      final dirPath = fs.path.dirname(path);
-      var dir = fs.directory(dirPath);
-      if (!await dir.exists()) {
-        dir = await _createDirectory(dirPath);
-      }
-      return dir.childFile(fs.path.basename(path)).create();
-    }
+    late FileHelpers helper;
 
     setUp(() async {
       fs = MemoryFileSystem();
       rootDir = fs.systemTempDirectory.path;
       project = Project(rootDir, fs);
-      await _createFile('integration_test/foo_test.dart');
-      await _createFile('integration_test/baz/bar_test.dart');
-      await _createFile('integration_test/helper.dart'); // ignores helper files
+      helper = FileHelpers(fs, rootDir);
+      await helper.createFile('integration_test/foo_test.dart');
+      await helper.createFile('integration_test/baz/bar_test.dart');
+      await helper
+          .createFile('integration_test/helper.dart'); // ignores helper files
       await aitfBuilder(project);
     });
 
