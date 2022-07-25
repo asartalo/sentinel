@@ -2,8 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:path/path.dart' as p;
 
-import 'package:sentinel/project.dart';
-
+import 'project.dart';
 import 'test_file_match.dart';
 
 // ignore_for_file: avoid_print

@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:glob/glob.dart';
-import 'package:sentinel/project.dart';
+import 'project.dart';
 
 final sep = Platform.pathSeparator;
 final reg = RegExp('\\$sep\\..+');

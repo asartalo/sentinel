@@ -156,7 +156,7 @@ packages:
       name: lint
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "1.5.1"
+    version: "1.8.2"
   logging:
     dependency: transitive
     description:
@@ -200,12 +200,12 @@ packages:
     source: hosted
     version: "2.0.0"
   path:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: path
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "1.8.0"
+    version: "1.8.2"
   pedantic:
     dependency: transitive
     description:

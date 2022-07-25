@@ -1,13 +1,13 @@
 import 'dart:async';
 
 import 'package:args/args.dart';
-import 'package:sentinel/aitf_builder.dart';
-import 'package:sentinel/test_runner.dart';
 import 'package:watcher/watcher.dart';
 
+import 'aitf_builder.dart';
 import 'path_tests.dart';
 import 'printer.dart';
 import 'project.dart';
+import 'test_runner.dart';
 
 typedef AllTestsBuilder = Future<void> Function(Project project);
 typedef Listener = Function(WatchEvent);

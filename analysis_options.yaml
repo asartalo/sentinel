@@ -1,1 +1,12 @@
 include: package:lint/analysis_options.yaml
+
+linter:
+  rules:
+    - prefer_relative_imports
+    - avoid_relative_lib_imports
+
+analyzer:
+  errors:
+    import_of_legacy_library_into_null_safe: ignore
+    always_use_package_imports: ignore
+    require_trailing_commas: ignore
