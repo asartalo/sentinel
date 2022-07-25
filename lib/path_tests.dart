@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:glob/glob.dart';
 import 'package:sentinel/project.dart';
 
 final sep = Platform.pathSeparator;
@@ -11,17 +12,39 @@ bool isHidden(String path, String rootPath) {
 }
 
 final onlyPaths = <String>{'lib', 'test', 'integration_test'};
-// ignore: todo
-// TODO: Refactor this one
-bool isIgnore(String path, Project project) {
+
+final Map<String, Glob> _globCache = {};
+
+Glob getGlob(String globString) {
+  final cached = _globCache[globString];
+  if (cached is Glob) {
+    return cached;
+  }
+  final glob = Glob(globString);
+  _globCache[globString] = glob;
+  return glob;
+}
+
+Future<bool> isIgnore(String path, Project project) async {
   final join = project.fs.path.join;
   final rootPath = project.rootPath;
-  if (path == join(rootPath, 'integration_test', 'all_tests.dart')) {
+  if (path == project.allIntegrationTestFilePath) {
     return true;
   }
+
   if (isHidden(path, rootPath) || isFunnyFile(path)) {
     return true;
   }
+
+  final ignoredPaths = await project.ignoredPaths();
+  for (final ignorePath in ignoredPaths) {
+    final fullPath = project.fs.path.join(project.rootPath, ignorePath);
+    final glob = getGlob(fullPath);
+    if (glob.matches(path)) {
+      return true;
+    }
+  }
+
   return !onlyPaths.any((dir) => path.startsWith(join(rootPath, dir)));
 }
 

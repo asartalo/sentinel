@@ -1,24 +1,59 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:path/path.dart' as p;
 
 import 'package:sentinel/project.dart';
 
+import 'test_file_match.dart';
+
 // ignore_for_file: avoid_print
-class TestRunner {
+
+abstract class TestRunner {
+  Future<bool> run({
+    TestFileMatch? match,
+    bool noIntegration = false,
+    String device = 'all',
+  });
+
+  bool get running;
+  Future<bool> terminate();
+  Future<bool> kill();
+
+  factory TestRunner(Project project) => _TestRunner(project);
+}
+
+class _TestRunner implements TestRunner {
   final Project project;
   Process? process;
   bool? _isFlutterProject;
   Future<void>? _running;
 
-  TestRunner(this.project);
+  _TestRunner(this.project);
 
   Future<bool> get isFlutterProject async {
     _isFlutterProject ??= await project.isFlutter();
     return _isFlutterProject!;
   }
 
+  @override
   bool get running => _running != null;
   int? get pid => process?.pid;
+
+  Future<List<FileSystemEntity>> _getIntegrationTestFiles() {
+    final dir = Directory(p.join(project.rootPath, 'integration_test'));
+    final files = <FileSystemEntity>[];
+    final completer = Completer<List<FileSystemEntity>>();
+    final lister = dir.list(recursive: true);
+    lister.listen(
+      (file) {
+        if (file.path.endsWith('_test.dart')) {
+          files.add(file);
+        }
+      },
+      onDone: () => completer.complete(files),
+    );
+    return completer.future;
+  }
 
   Future<bool> _runIntegrationTest(String path, {String device = 'all'}) async {
     final args = ['drive', '--driver=integration_test/driver.dart'];
@@ -30,12 +65,21 @@ class TestRunner {
       final relativePath = path.replaceFirst(project.rootPath, '');
       print('\nRunning single integration test for $relativePath');
       args.add('--target=$path');
-    } else {
-      print('\nRunning all integration tests');
-      args.add('integration_test/all_tests.dart');
+      return _execute(args);
     }
-
-    return _execute(args);
+    print('\nRunning all integration tests');
+    final integrationTestFiles = await _getIntegrationTestFiles();
+    if (integrationTestFiles.isEmpty) {
+      print('\nNo integration test files found.');
+      return true;
+    }
+    for (final file in integrationTestFiles) {
+      final result = await _runIntegrationTest(file.path, device: device);
+      if (!result) {
+        return result;
+      }
+    }
+    return true;
   }
 
   Future<bool> _runBasicTest([String path = '']) async {
@@ -62,9 +106,9 @@ class TestRunner {
   Future<bool> _execute(List<String> args) async {
     var success = false;
     try {
-      final mode = ProcessStartMode.inheritStdio;
-      // final mode = ProcessStartMode.normal;
-      // final mode = ProcessStartMode.detachedWithStdio;
+      const mode = ProcessStartMode.inheritStdio;
+      // const mode = ProcessStartMode.normal;
+      // const mode = ProcessStartMode.detachedWithStdio;
       process = await Process.start(
         await _mainCommand(),
         args,
@@ -103,6 +147,7 @@ class TestRunner {
     return success;
   }
 
+  @override
   Future<bool> run({
     TestFileMatch? match,
     bool noIntegration = false,
@@ -140,6 +185,7 @@ class TestRunner {
     return success;
   }
 
+  @override
   Future<bool> terminate() async {
     if (process is Process) {
       final proc = process!;
@@ -156,6 +202,7 @@ class TestRunner {
     return false;
   }
 
+  @override
   Future<bool> kill() async {
     if (process is Process) {
       final result = process!.kill(ProcessSignal.sigkill);

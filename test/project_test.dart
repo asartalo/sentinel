@@ -1,22 +1,27 @@
 import 'package:file/file.dart';
 import 'package:file/memory.dart';
 import 'package:sentinel/project.dart';
+import 'package:sentinel/test_file_match.dart';
 import 'package:test/test.dart';
+
+import 'helpers.dart';
 
 void main() {
   group('Project', () {
     late Project project;
     late FileSystem fs;
     late String rootDir;
+    late FileHelpers helper;
 
     setUp(() {
       fs = MemoryFileSystem();
       rootDir = fs.systemTempDirectory.path;
+      helper = FileHelpers(fs, rootDir);
       project = Project(rootDir, fs);
       // Create a pubspec.yaml;
     });
 
-    group('.hasTestDir()', () {
+    group('hasTestDir()', () {
       test('returns false when there is no test directory', () async {
         expect(await project.hasTestDir(), false);
       });
@@ -27,7 +32,7 @@ void main() {
       });
     });
 
-    group('.hasIntegrationTestDir()', () {
+    group('hasIntegrationTestDir()', () {
       test('returns false when there is no integration test directory',
           () async {
         expect(await project.hasIntegrationTestDir(), false);
@@ -42,7 +47,7 @@ void main() {
       });
     });
 
-    group('.isFlutter()', () {
+    group('isFlutter()', () {
       test('returns false when there is no pubspec.yaml file', () async {
         expect(await project.isFlutter(), false);
       });
@@ -85,30 +90,10 @@ flutter:
       });
     });
 
-    Future<Directory> _createDirectory(String path) async {
-      final paths = path.split('/');
-      var currentPath = rootDir;
-      late Directory currentDir;
-      for (final part in paths) {
-        currentPath = fs.path.join(currentPath, part);
-        currentDir = await fs.directory(currentPath).create();
-      }
-      return currentDir;
-    }
-
-    Future<File> _createFile(String path) async {
-      final dirPath = fs.path.dirname(path);
-      var dir = fs.directory(dirPath);
-      if (!await dir.exists()) {
-        dir = await _createDirectory(dirPath);
-      }
-      return dir.childFile(fs.path.basename(path)).create();
-    }
-
-    group('.unitTestFor()', () {
+    group('unitTestFor()', () {
       late File libFile;
       setUp(() async {
-        libFile = await _createFile('lib/foo/bar.dart');
+        libFile = await helper.createFile('lib/foo/bar.dart');
       });
 
       test('returns null if no test file is available', () async {
@@ -116,15 +101,12 @@ flutter:
       });
 
       test('returns file path of test file if it is available', () async {
-        final testFile = await _createFile('test/foo/bar_test.dart');
+        final testFile = await helper.createFile('test/foo/bar_test.dart');
         expect(await project.unitTestFor(libFile.path), testFile.path);
       });
     });
 
-    group('.findMatchingTest()', () {
-      // late File libFile;
-      // late File unitTestFile;
-      // late File unitTestFile;
+    group('findMatchingTest()', () {
       test('it returns a mismatch if it is not a lib file', () async {
         expect(
           await project.findMatchingTest('some/file/that.dart'),
@@ -137,7 +119,7 @@ flutter:
       group('when file is a dart file under lib', () {
         late File libFile;
         setUp(() async {
-          libFile = await _createFile('lib/foo/library.dart');
+          libFile = await helper.createFile('lib/foo/library.dart');
         });
 
         test('it returns a mismatch if a unit test does not exist', () async {
@@ -151,7 +133,8 @@ flutter:
         });
 
         test('it returns a match if a unit test exists', () async {
-          final testFile = await _createFile('test/foo/library_test.dart');
+          final testFile =
+              await helper.createFile('test/foo/library_test.dart');
           expect(
             await project.findMatchingTest(libFile.path),
             TestFileMatch(
@@ -164,7 +147,8 @@ flutter:
 
       group('when file is a unit test file', () {
         test('it returns a match if a unit test exists', () async {
-          final testFile = await _createFile('test/foo/library_test.dart');
+          final testFile =
+              await helper.createFile('test/foo/library_test.dart');
           expect(
             await project.findMatchingTest(testFile.path),
             TestFileMatch(
@@ -178,7 +162,7 @@ flutter:
       group('when file is an integration test file', () {
         test('it returns a match', () async {
           final testFile =
-              await _createFile('integration_test/screen_test.dart');
+              await helper.createFile('integration_test/screen_test.dart');
           expect(
             await project.findMatchingTest(testFile.path),
             TestFileMatch(
@@ -188,6 +172,88 @@ flutter:
             ),
           );
         });
+      });
+    });
+
+    group('getIntegrationTestFiles()', () {
+      late String testFile1;
+      late String testFile2;
+      late List<String> files;
+
+      setUp(() async {
+        testFile1 =
+            (await helper.createFile('integration_test/foo_test.dart')).path;
+        testFile2 =
+            (await helper.createFile('integration_test/bar_test.dart')).path;
+        await helper
+            .createFile('integration_test/helper.dart'); // ignores helper files
+
+        files = (await project.getIntegrationTestFiles())
+            .map((e) => e.path)
+            .toList();
+      });
+
+      test('it returns all test files', () {
+        expect(files.length, equals(2));
+        expect(files, contains(testFile1));
+        expect(files, contains(testFile2));
+      });
+    });
+
+    group('allIntegrationTestFile()', () {
+      test('it can get file from project root', () async {
+        await fs.directory(fs.path.join(rootDir, 'integration_test')).create();
+        final file = fs
+            .directory(fs.path.join(rootDir, 'integration_test'))
+            .childFile('all_tests.dart');
+        await file.writeAsString('////');
+        final found = project.allIntegrationTestFile();
+        expect(await found.readAsString(), await file.readAsString());
+      });
+    });
+
+    group('getDir()', () {
+      test('it can get a directory', () async {
+        final directory =
+            await fs.directory(fs.path.join(rootDir, 'foo')).create();
+        expect(project.getDir('foo').path, equals(directory.path));
+      });
+    });
+
+    group('getRelativePath()', () {
+      test('it can get relative path of file', () async {
+        final file = (await fs.directory(fs.path.join(rootDir, 'foo')).create())
+            .childFile('bar.txt');
+        await file.writeAsString(' ');
+        expect(
+          project.getRelativePath(file.path, from: rootDir),
+          equals('foo/bar.txt'),
+        );
+      });
+    });
+
+    group('ignoredPaths()', () {
+      test('it defaults to empty list', () async {
+        expect(await project.ignoredPaths(), equals(<String>[]));
+      });
+
+      test('it returns ignored files when specified in config file', () async {
+        final file = fs.directory(rootDir).childFile('sentinel.yaml');
+        await file.writeAsString('''
+ignore:
+  - lib/one/*.dart
+  - test/single_test.dart
+''');
+        expect(
+          await project.ignoredPaths(),
+          equals(
+            [
+              'lib/one/*.dart',
+              'test/single_test.dart',
+            ],
+          ),
+        );
+        await file.delete();
       });
     });
   });
