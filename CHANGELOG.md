@@ -1,3 +1,9 @@
+# 2.2.0 (2022-07-25)
+
+## Features
+
+- ignore some files from watch ([18c0beb](commit/18c0beb))
+
 # 2.1.1 (2021-04-04)
 
 ## Bug Fixes
