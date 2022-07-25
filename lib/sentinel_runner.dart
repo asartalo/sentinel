@@ -40,7 +40,7 @@ class SentinelRunner {
       if (debounce) {
         return;
       }
-      if (!canSkip || isIgnore(event.path, project)) {
+      if (!canSkip || await isIgnore(event.path, project)) {
         return;
       }
 

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:path/path.dart' as p;
 
 import 'package:sentinel/project.dart';
 
@@ -38,6 +39,22 @@ class _TestRunner implements TestRunner {
   bool get running => _running != null;
   int? get pid => process?.pid;
 
+  Future<List<FileSystemEntity>> _getIntegrationTestFiles() {
+    final dir = Directory(p.join(project.rootPath, 'integration_test'));
+    final files = <FileSystemEntity>[];
+    final completer = Completer<List<FileSystemEntity>>();
+    final lister = dir.list(recursive: true);
+    lister.listen(
+      (file) {
+        if (file.path.endsWith('_test.dart')) {
+          files.add(file);
+        }
+      },
+      onDone: () => completer.complete(files),
+    );
+    return completer.future;
+  }
+
   Future<bool> _runIntegrationTest(String path, {String device = 'all'}) async {
     final args = ['drive', '--driver=integration_test/driver.dart'];
     if (device != 'all') {
@@ -48,12 +65,21 @@ class _TestRunner implements TestRunner {
       final relativePath = path.replaceFirst(project.rootPath, '');
       print('\nRunning single integration test for $relativePath');
       args.add('--target=$path');
-    } else {
-      print('\nRunning all integration tests');
-      args.add('integration_test/all_tests.dart');
+      return _execute(args);
     }
-
-    return _execute(args);
+    print('\nRunning all integration tests');
+    final integrationTestFiles = await _getIntegrationTestFiles();
+    if (integrationTestFiles.isEmpty) {
+      print('\nNo integration test files found.');
+      return true;
+    }
+    for (final file in integrationTestFiles) {
+      final result = await _runIntegrationTest(file.path, device: device);
+      if (!result) {
+        return result;
+      }
+    }
+    return true;
   }
 
   Future<bool> _runBasicTest([String path = '']) async {
@@ -80,9 +106,9 @@ class _TestRunner implements TestRunner {
   Future<bool> _execute(List<String> args) async {
     var success = false;
     try {
-      final mode = ProcessStartMode.inheritStdio;
-      // final mode = ProcessStartMode.normal;
-      // final mode = ProcessStartMode.detachedWithStdio;
+      const mode = ProcessStartMode.inheritStdio;
+      // const mode = ProcessStartMode.normal;
+      // const mode = ProcessStartMode.detachedWithStdio;
       process = await Process.start(
         await _mainCommand(),
         args,

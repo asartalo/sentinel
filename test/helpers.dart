@@ -17,12 +17,24 @@ class FileHelpers {
     return currentDir;
   }
 
-  Future<File> createFile(String path) async {
+  Future<File> createFile(String path, [String? content]) async {
     final dirPath = fs.path.dirname(path);
-    var dir = fs.directory(dirPath);
+    var dir = fs.directory(fs.path.join(rootDir, dirPath));
     if (!await dir.exists()) {
       dir = await createDirectory(dirPath);
     }
-    return dir.childFile(fs.path.basename(path)).create();
+    final futureFile = dir.childFile(fs.path.basename(path)).create();
+    if (content is String) {
+      final file = await futureFile;
+      return file.writeAsString(content);
+    }
+    return futureFile;
+  }
+
+  Future<void> deleteFile(String path) async {
+    final file = fs.file(fs.path.join(rootDir, path));
+    if (await file.exists()) {
+      await file.delete();
+    }
   }
 }

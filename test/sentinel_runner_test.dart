@@ -203,6 +203,57 @@ void main() {
           });
         });
       });
+
+      group('when config file is set', () {
+        setUp(() async {
+          listener = runner.createListener(
+            testRunner: testRunner,
+            isFlutter: false,
+          );
+          await helper.createFile('sentinel.yaml', '''
+ignore:
+  - test/tmp/*
+  - lib/schema.dart
+''');
+        });
+
+        tearDown(() async {
+          await helper.deleteFile('sentinel.yaml');
+        });
+
+        group('when a dart lib file is modified', () {
+          late File file;
+          late File testFile;
+
+          setUp(() async {
+            file = await helper.createFile('lib/foo.dart');
+            testFile = await helper.createFile('test/foo_test.dart');
+            event = WatchEvent(ChangeType.MODIFY, file.path);
+            await listener(event);
+          });
+
+          test('it runs for the test file', () {
+            expect(
+              testRunner.runs.first.match!.path,
+              equals(testFile.path),
+            );
+          });
+        });
+
+        group('when a file under an ignored directory is modified', () {
+          late File file;
+
+          setUp(() async {
+            file = await helper.createFile('test/tmp/foo_test.dart');
+            event = WatchEvent(ChangeType.MODIFY, file.path);
+            await listener(event);
+          });
+
+          test('it does not run any tests', () {
+            expect(testRunner.runs.length, equals(0));
+          });
+        });
+      });
     });
   });
 }

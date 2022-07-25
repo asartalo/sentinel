@@ -1,13 +1,15 @@
 import 'dart:async';
 
-import 'package:yaml/yaml.dart';
 import 'package:file/file.dart';
+import 'package:yaml/yaml.dart';
 
+import 'config.dart';
 import 'test_file_match.dart';
 
 const _testDir = 'test';
 const _iTestDir = 'integration_test';
 const _pubFile = 'pubspec.yaml';
+const _configFile = 'sentinel.yaml';
 
 abstract class Project {
   FileSystem get fs;
@@ -21,13 +23,19 @@ abstract class Project {
   Future<TestFileMatch> findMatchingTest(String path);
   Future<List<File>> getIntegrationTestFiles();
   File allIntegrationTestFile();
+  String get allIntegrationTestFilePath;
   Directory getDir(String path);
   String getRelativePath(String path, {required String from});
+  Future<List<String>> ignoredPaths();
 
   factory Project(String rootPath, FileSystem fs) => _Project(rootPath, fs);
 }
 
+final defaultConfig = Config(ignorePaths: const []);
+
 class _Project implements Project {
+  Config? _config;
+
   @override
   final FileSystem fs;
 
@@ -47,6 +55,29 @@ class _Project implements Project {
 
   String _fullPath(String path, [String? part2, String? part3]) {
     return fs.path.join(rootPath, path, part2, part3);
+  }
+
+  Future<Config> get config async {
+    _config ??= await _loadConfiguration();
+
+    return _config!;
+  }
+
+  Future<Config> _loadConfiguration() async {
+    final configFile = fs.file(_fullPath(_configFile));
+    if (await configFile.exists()) {
+      final yamlConfig = loadYaml(await configFile.readAsString());
+      if (yamlConfig is YamlMap) {
+        final ignorePathsInYaml = yamlConfig['ignore'];
+        List<String> ignorePaths = [];
+        if (ignorePathsInYaml is YamlList) {
+          ignorePaths =
+              ignorePathsInYaml.map((element) => element.toString()).toList();
+        }
+        return Config(ignorePaths: ignorePaths);
+      }
+    }
+    return defaultConfig;
   }
 
   @override
@@ -132,6 +163,12 @@ class _Project implements Project {
   }
 
   @override
+  String get allIntegrationTestFilePath => fs.path.join(
+        integrationTestDirPath,
+        'all_tests.dart',
+      );
+
+  @override
   Directory getDir(String path) {
     return fs.directory(rootPath).childDirectory(path);
   }
@@ -139,5 +176,11 @@ class _Project implements Project {
   @override
   String getRelativePath(String path, {required String from}) {
     return fs.path.relative(path, from: from);
+  }
+
+  @override
+  Future<List<String>> ignoredPaths() async {
+    final conf = await config;
+    return conf.ignorePaths;
   }
 }

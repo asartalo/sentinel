@@ -231,5 +231,30 @@ flutter:
         );
       });
     });
+
+    group('ignoredPaths()', () {
+      test('it defaults to empty list', () async {
+        expect(await project.ignoredPaths(), equals(<String>[]));
+      });
+
+      test('it returns ignored files when specified in config file', () async {
+        final file = fs.directory(rootDir).childFile('sentinel.yaml');
+        await file.writeAsString('''
+ignore:
+  - lib/one/*.dart
+  - test/single_test.dart
+''');
+        expect(
+          await project.ignoredPaths(),
+          equals(
+            [
+              'lib/one/*.dart',
+              'test/single_test.dart',
+            ],
+          ),
+        );
+        await file.delete();
+      });
+    });
   });
 }
