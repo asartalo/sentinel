@@ -1,1 +1,1 @@
-const sentinelVersion = '2.2.0';
+const sentinelVersion = '2.2.2';

@@ -1,3 +1,9 @@
+# 2.2.2 (2022-07-26)
+
+## Bug Fixes
+
+- update version help text before release ([cf0a5aa](commit/cf0a5aa))
+
 # 2.2.1 (2022-07-26)
 
 ## Bug Fixes
