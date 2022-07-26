@@ -110,6 +110,9 @@ jobs:
           fi
           echo "::set-output name=shouldRelease::${shouldRelease}"
 
+      - name: Update version for sentinel
+        run: release_tools update_version --file="lib/sentinel_version.dart" ${{ steps.nextVersion.outputs.value }}
+
       - name: Commit Release
         if: steps.releaseInfo.outputs.shouldRelease == 'yes'
         run: |
