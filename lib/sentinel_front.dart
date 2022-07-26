@@ -1,9 +1,11 @@
 import 'package:args/args.dart';
 import 'package:equatable/equatable.dart';
+import 'sentinel_version.dart';
 
 enum Command {
   help,
   watch,
+  version,
 }
 
 class ParseResult with EquatableMixin {
@@ -23,6 +25,12 @@ class ParseResult with EquatableMixin {
     Command.help,
     integration: false,
   );
+
+  static final version = ParseResult(
+    Command.version,
+    integration: false,
+  );
+
   factory ParseResult.watch({
     bool integration = false,
     String device = 'all',
@@ -64,12 +72,21 @@ class SentinelFront {
       abbr: 'h',
       help: 'Display usage information.',
     );
+    _parser.addFlag(
+      'version',
+      negatable: false,
+      abbr: 'v',
+      help: 'Show sentinel version',
+    );
   }
 
   ParseResult parse(List<String> arguments) {
     final args = _parser.parse(arguments);
     if (args['help'] as bool) {
       return ParseResult.help;
+    }
+    if (args['version'] as bool) {
+      return ParseResult.version;
     }
 
     final pathArgs = args.rest;
@@ -91,5 +108,9 @@ ${_parser.usage}
 
 See https://pub.dev/packages/sentinel for more information.
 ''';
+  }
+
+  String version() {
+    return sentinelVersion;
   }
 }

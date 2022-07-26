@@ -23,6 +23,10 @@ Future<void> main(List<String> arguments) async {
       printer.println(front.helpText());
       return;
     }
+    if (result.command == Command.version) {
+      printer.println(front.version());
+      return;
+    }
     final fullPath = await getCanonicalPath(result.directory);
     final project = Project(fullPath, fs);
     final runner = SentinelRunner(project: project, printer: printer, sep: sep);
