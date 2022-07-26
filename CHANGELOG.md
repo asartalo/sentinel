@@ -1,3 +1,9 @@
+# 2.2.3 (2022-07-26)
+
+## Bug Fixes
+
+- better release logic ([51ae0bf](commit/51ae0bf))
+
 # 2.2.2 (2022-07-26)
 
 ## Bug Fixes
