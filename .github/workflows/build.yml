@@ -110,13 +110,6 @@ jobs:
           fi
           echo "::set-output name=shouldRelease::${shouldRelease}"
 
-      - name: Stop Gap Prepared Release
-        run: |
-          cat pubspec.yaml
-          cat VERSION.txt
-          cat RELEASE_SUMMARY.txt
-          foo
-
       - name: Commit Release
         if: steps.releaseInfo.outputs.shouldRelease == 'yes'
         run: |
