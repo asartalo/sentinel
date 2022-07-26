@@ -118,7 +118,9 @@ jobs:
       - name: Update version
         if: steps.shouldRelease.outputs.value == 'yes'
         id: updateVersion
-        run: release_tools update_version ${{ steps.nextVersion.outputs.value }}
+        run: |
+          release_tools update_version ${{ steps.nextVersion.outputs.value }}
+          release_tools update_version --file="lib/sentinel_version.dart" ${{ steps.nextVersion.outputs.value }}
 
       - name: Write changelog
         id: changelog
