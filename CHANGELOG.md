@@ -1,3 +1,9 @@
+# 2.2.1 (2022-07-26)
+
+## Bug Fixes
+
+- add command to show sentinel version ([b052501](commit/b052501))
+
 # 2.2.0 (2022-07-25)
 
 ## Features
