@@ -92,7 +92,7 @@ jobs:
 
       - name: Prepare release
         run: |
-          flutter pub run release_tools prepare_release -w
+          dart pub run release_tools prepare_release -w
           cat VERSION.txt
 
       - name: Get Release Info
