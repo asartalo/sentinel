@@ -4,27 +4,24 @@ version: 2.2.3
 homepage: https://github.com/asartalo/sentinel
 
 environment:
-  sdk: ">=2.12.0 <3.0.0"
+  sdk: ">=3.2.0 <4.0.0"
 
 dependencies:
   ansicolor: ^2.0.1
-  args: ^2.0.0
-  equatable: ^2.0.0
-  file: ^6.1.0
+  args: ^2.4.2
+  equatable: ^2.0.5
+  file: ^7.0.0
   glob: ^2.1.0
   path: ^1.8.2
   watcher: ^1.0.0
   yaml: ^3.1.0
 
 dev_dependencies:
-  conventional: ^0.2.4
-  coverage: ^1.0.1
-  git_hooks:
-    git:
-      url: https://github.com/asartalo/git_hooks.git
-      ref: null-safety-2
-  lint: ^1.8.2
-  test: ^1.16.5
+  conventional: ^0.4.0
+  coverage: ^1.7.1
+  git_hooks: ^1.0.1
+  lint: ^2.2.0
+  test: ^1.24.9
 
 executables:
   sentinel:
