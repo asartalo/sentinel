@@ -12,16 +12,16 @@ dependencies:
   equatable: ^2.0.5
   file: ^7.0.0
   glob: ^2.1.0
-  path: ^1.8.2
+  path: ^1.9.0
   watcher: ^1.0.0
   yaml: ^3.1.0
 
 dev_dependencies:
   conventional: ^0.4.0
-  coverage: ^1.7.1
+  coverage: ^1.7.2
   git_hooks: ^1.0.1
-  lint: ^2.2.0
-  test: ^1.24.9
+  lint: ^2.3.0
+  test: ^1.25.0
 
 executables:
   sentinel:
