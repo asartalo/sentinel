@@ -24,21 +24,18 @@ jobs:
       branch: ${{ steps.branchinfo.outputs.branch }}
 
     steps:
-      - uses: nelonoel/branch-name@v1.0.1
-      # Use branch name for whatever purpose
       - name: Store the branch name
         id: branchinfo
-        run: echo "::set-output name=branch::${BRANCH_NAME}"
+        run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
 
       - name: Check if we were able to save branch info
         run: echo ${{ steps.branchinfo.outputs.branch }}
 
-      - uses: cedx/setup-dart@v3
-        with:
-          release-channel: stable
+      - name: Setup Dart SDK
+        uses: dart-lang/setup-dart@v1
 
       # Checkout
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Get dependencies
         run: dart pub get
@@ -50,16 +47,13 @@ jobs:
         run: dart analyze .
 
       - name: Run Tests with coverage
-        run: dart test --coverage="coverage"
-
-      - name: Prepare coverage
-        run: dart pub run coverage:format_coverage --lcov --in=coverage --out=lcov.info --packages=.packages --report-on=lib
+        run: dart run coverage:test_with_coverage
 
       - name: Upload coverage
-        uses: coverallsapp/github-action@v1.1.2
+        uses: coverallsapp/github-action@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: lcov.info
+          file: coverage/lcov.info
 
   release:
     name: Release
@@ -70,11 +64,10 @@ jobs:
     steps:
       - run: echo ${{ needs.test.outputs.branch }}
 
-      - uses: cedx/setup-dart@v3
-        with:
-          release-channel: stable
+      - name: Setup Dart SDK
+        uses: dart-lang/setup-dart@v1
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -93,7 +86,7 @@ jobs:
       - name: Prepare release
         run: |
           release_tools prepare_release -w
-          cat VERSION.txt
+          cat VERSION.txt || echo "No Release"
 
       - name: Get Release Info
         id: releaseInfo
@@ -120,18 +113,17 @@ jobs:
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add .
-          git commit -m "chore(release): release for ${{ steps.releaseInfo.outputs.version }}"
+          git commit -m "chore(release): prepare release for ${{ steps.releaseInfo.outputs.version }}"
           git push
 
       - name: Create Release
         if: steps.releaseInfo.outputs.shouldRelease == 'yes'
         id: createRelease
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: ncipollo/release-action@v1
         with:
-          tag_name: ${{ steps.releaseInfo.outputs.version }}
-          release_name: Release ${{ steps.releaseInfo.outputs.version }}
+          token: ${{ secrets.PAT }}
+          tag: ${{ steps.releaseInfo.outputs.version }}
+          name: Release ${{ steps.releaseInfo.outputs.version }}
           body: |
             Changes in this Release
 
@@ -139,16 +131,3 @@ jobs:
 
           draft: false
           prerelease: false
-
-      # Publish
-      - name: Setup credentials
-        if: steps.releaseInfo.outputs.shouldRelease == 'yes'
-        run: |
-          mkdir -p ~/.pub-cache
-          cat <<EOF > ~/.pub-cache/credentials.json
-          ${{ secrets.PUB_CREDENTIALS }}
-          EOF
-
-      - name: Publish package
-        if: steps.releaseInfo.outputs.shouldRelease == 'yes'
-        run: dart pub publish -f

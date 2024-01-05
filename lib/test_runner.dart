@@ -55,7 +55,7 @@ class _TestRunner implements TestRunner {
   }
 
   Future<bool> _runIntegrationTest(String path, {String device = 'all'}) async {
-    final args = ['drive', '--driver=integration_test/driver.dart'];
+    final args = ['test'];
     if (device != 'all') {
       args.add('-d');
       args.add(device);
@@ -63,22 +63,19 @@ class _TestRunner implements TestRunner {
     if (path != '') {
       final relativePath = path.replaceFirst(project.rootPath, '');
       print('\nRunning single integration test for $relativePath');
-      args.add('--target=$path');
+      args.add(path);
       return _execute(args);
     }
     print('\nRunning all integration tests');
-    final integrationTestFiles = await _getIntegrationTestFiles();
-    if (integrationTestFiles.isEmpty) {
-      print('\nNo integration test files found.');
-      return true;
+    final allTests = project.allIntegrationTestFile();
+    if (await allTests.exists()) {
+      final allTestsPath = allTests.path.replaceFirst(project.rootPath, '');
+      args.add(allTestsPath.replaceFirst('/', ''));
+      return _execute(args);
     }
-    for (final file in integrationTestFiles) {
-      final result = await _runIntegrationTest(file.path, device: device);
-      if (!result) {
-        return result;
-      }
-    }
-    return true;
+
+    args.add('integration_test/**/*_test.dart');
+    return _execute(args);
   }
 
   Future<bool> _runBasicTest([String path = '']) async {
