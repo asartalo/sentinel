@@ -1,3 +1,11 @@
+# 2.3.0 (2024-01-06)
+
+## Features
+
+- use flutter test for integration tests instead of driver ([c4bd984](commit/c4bd984))
+- update dependencies ([6226d5b](commit/6226d5b))
+- update dependencies ([aed416e](commit/aed416e))
+
 # 2.2.3 (2022-07-26)
 
 ## Bug Fixes

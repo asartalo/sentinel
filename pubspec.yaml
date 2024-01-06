@@ -1,6 +1,6 @@
 name: sentinel
 description: A Dart and Flutter project automatic test runner to run tests automatically as files change. Inspired by Jest and Ruby's Guard.
-version: 2.2.3
+version: 2.3.0
 homepage: https://github.com/asartalo/sentinel
 
 environment:
