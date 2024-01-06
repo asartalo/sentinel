@@ -56,7 +56,7 @@ jobs:
           file: coverage/lcov.info
 
   release:
-    name: Release
+    name: Prepare Release
     runs-on: ubuntu-latest
     needs: test
     if: ${{ needs.test.outputs.branch == 'main' }}
@@ -96,15 +96,15 @@ jobs:
             shouldRelease="yes"
             releaseVersion=$(cat VERSION.txt)
             summary=$(cat RELEASE_SUMMARY.txt)
-            echo "::set-output name=version::${releaseVersion}"
-            echo "::set-output name=summary::${summary}"
+            echo "version=${releaseVersion}" >> $GITHUB_OUTPUT
+            echo "summary=${summary}" >> $GITHUB_OUTPUT
           else
             shouldRelease="false"
           fi
-          echo "::set-output name=shouldRelease::${shouldRelease}"
+          echo "shouldRelease=${shouldRelease}" >> $GITHUB_OUTPUT
 
       - name: Update version for sentinel
-        run: release_tools update_version --file="lib/sentinel_version.dart" ${{ steps.nextVersion.outputs.value }}
+        run: release_tools update_version --file="lib/sentinel_version.dart" ${{  steps.releaseInfo.outputs.version  }}
 
       - name: Commit Release
         if: steps.releaseInfo.outputs.shouldRelease == 'yes'
